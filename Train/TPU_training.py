@@ -1,6 +1,17 @@
+############################################################################################
+#                                  Author: Anas AHOUZI                                     #
+#                               File Name: Train/TPU_training.py                           #
+#                           Creation Date: December 17, 2019                               #
+#                         Source Language: Python                                          #
+#                  Repository: https://github.com/aahouzi/FaceFocus-Project                #
+#                              --- Code Description ---                                    #
+#                 Implementation of TPU training process for the SRGAN                     #
+############################################################################################
 
 
-
+################################################################################
+#                                   Packages                                   #
+################################################################################
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from Model.srgan import generator, discriminator
@@ -13,16 +24,26 @@ import time
 import os
 
 
+################################################################################
+#                                Main arguments                                #
+################################################################################
+
 parser = argparse.ArgumentParser(description='Train the model using Colab TPUs.')
 
 parser.add_argument('--n_epochs', required=True, help='Number of epochs')
 parser.add_argument('--hr_shape', required=True, help='High resolution shape')
 parser.add_argument('--lr_shape', required=True, help='Low resolution shape')
-parser.add_argument('--train_hr', required=True, help='Path to HR tfRecords in Cloud Storage')
-parser.add_argument('--features_description', required=True, help='Description of a single feature sample of tfRecords')
-parser.add_argument('--steps_per_epoch', required=True, help='Number of steps per epoch')
+parser.add_argument('--train_hr_path', required=True, help='Path to training HR tfRecords in Google Cloud Storage')
+parser.add_argument('--val_hr_path', required=True, help='Path to validation HR tfRecords in Google Cloud Storage')
+parser.add_argument('--batch_val_hr', required=True, help='A batch of 4 HR validation images')
+parser.add_argument('--batch_val_lr', required=True, help='A batch of 4 LR validation images')
+parser.add_argument('--features_description', required=True, help='Description of a tf.train.Example in tfRecords')
 
 args = parser.parse_args()
+
+################################################################################
+#                                   Main code                                  #
+################################################################################
 
 
 try:
@@ -49,7 +70,7 @@ else:
     strategy = tf.distribute.get_strategy() # default strategy that works on CPU and single GPU
     print('Running on CPU')
 
-print("Number of accelerators: ", strategy.num_replicas_in_sync)
+print("\n Number of accelerators: {}\n".format(strategy.num_replicas_in_sync))
 
 
 with strategy.scope():
@@ -73,7 +94,15 @@ with strategy.scope():
 
     @tf.function
     def train_step(dataset, batch_size):
+        """
+        This function performs one training step on a batch of HR/LR images.
+        :param dataset:
+        :param batch_size:
+        :return:
+        """
+        # Get HR/LR images
         hr_img, lr_img = dataset
+
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             # Start the training
             generated_images = generator_model(lr_img, training=True)
@@ -103,42 +132,49 @@ with strategy.scope():
         perceptual_loss_sum.update_state(perceptual_loss)
 
 
-    # Distribute the datset according to the strategy
-    train_dataset = get_dataset(args.train_hr, args.hr_shape, args.lr_shape, args.features_description,
+    # Distribute the dataset according to the strategy.
+    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape, args.features_description,
                                 batch_size=4 * strategy.num_replicas_in_sync)
 
-    train_dist_ds_img = strategy.experimental_distribute_dataset(train_dataset)
+    # Returns a tf.distribute.DistributedDataset from tf.data.Dataset, which represents a dataset
+    # distributed among devices and machines.
+    train_dist_img = strategy.experimental_distribute_dataset(train_dataset)
+
+    # Define the batch size based on number of cores.
     batch_size = tf.constant(4 * strategy.num_replicas_in_sync, dtype=tf.float32)
 
-    print("\n[INFO]: Steps per epoch: {}".format(args.steps_per_epoch))
+    # Define Number of steps per epoch.
+    steps_per_epoch = 800 // (4 * strategy.num_replicas_in_sync)
+
+    print("\n[INFO]: Steps per epoch: {}".format(steps_per_epoch))
     Loss = defaultdict(list)
     epoch_start_time = time.time()
     epoch = 0
     # A step is one gradient update over a batch of data, An epoch
     # is usually many steps when we go through the whole training set.
-    for step, images in enumerate(train_dist_ds_img):
+    for step, images in enumerate(train_dist_img):
 
         # Launch the training
         strategy.run(train_step, args=(images, batch_size))
         print('=', end='', flush=True)
 
         # Displaying the results after each epoch
-        if ((step + 1) // args.steps_per_epoch) > epoch:
+        if ((step + 1) // steps_per_epoch) > epoch:
             print('>', end='', flush=True)
 
             # compute metrics
-            Loss['adv_loss'].append(adversarial_loss_sum.result().numpy() / args.steps_per_epoch)
-            Loss['disc_loss'].append(discriminator_loss_sum.result().numpy() / args.steps_per_epoch)
-            Loss['perceptual_loss'].append(perceptual_loss_sum.result().numpy() / args.steps_per_epoch)
-            Loss['content_loss'].append(content_loss_sum.result().numpy() / args.steps_per_epoch)
+            Loss['adv_loss'].append(adversarial_loss_sum.result().numpy() / steps_per_epoch)
+            Loss['disc_loss'].append(discriminator_loss_sum.result().numpy() / steps_per_epoch)
+            Loss['perceptual_loss'].append(perceptual_loss_sum.result().numpy() / steps_per_epoch)
+            Loss['content_loss'].append(content_loss_sum.result().numpy() / steps_per_epoch)
 
             if epoch % 100 == 0:
                 # Test the model over a batch of 4 images (batch_lr), and save the results
-                batch_sr = generate_and_save_images(generator_model, args.batch_lr, epoch)
+                batch_sr = generate_and_save_images(generator_model, args.batch_val_lr, epoch)
 
                 # Compute the PSNR/SSIM metrics
-                psnr_metric = round(np.sum(tf.image.psnr(batch_sr, args.batch_hr, max_val=255.0)) / 4, 2)
-                ssim_metric = round(np.sum(tf.image.ssim(batch_sr, args.batch_hr, max_val=255.0)) / 4, 2)
+                psnr_metric = round(np.sum(tf.image.psnr(batch_sr, args.batch_val_hr, max_val=255.0)) / 4, 2)
+                ssim_metric = round(np.sum(tf.image.ssim(batch_sr, args.batch_val_hr, max_val=255.0)) / 4, 2)
 
                 print('\n PSNR: {} | SSIM: {} \n'.format(psnr_metric, ssim_metric))
 

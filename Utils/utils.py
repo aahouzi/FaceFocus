@@ -1,10 +1,26 @@
+############################################################################################
+#                                  Author: Anas AHOUZI                                     #
+#                               File Name: Utils/utils.py                                  #
+#                           Creation Date: December 17, 2019                               #
+#                         Source Language: Python                                          #
+#                  Repository: https://github.com/aahouzi/FaceFocus-Project                #
+#                              --- Code Description ---                                    #
+#                             Various utility functions                                    #
+############################################################################################
 
+
+################################################################################
+#                                   Packages                                   #
+################################################################################
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import multiprocessing
 import glob
 
 
+################################################################################
+#                                  Main Code                                   #
+################################################################################
 def normalize(x):
     """Normalizes RGB images to [0, 1]."""
     return x / 255.0
@@ -21,11 +37,12 @@ def denormalize_tanh(x):
 
 
 def pixel_shuffle(scale):
+    """It's used in the upscale blocks to enhance the image resolution"""
     return lambda x: tf.nn.depth_to_space(x, scale)
 
 
 def _bytes_feature(value):
-    """Convert string / byte in bytes_list."""
+    """Convert string/byte in bytes_list."""
     if isinstance(value, type(tf.constant(0))):
         value = value.numpy()
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
@@ -42,6 +59,7 @@ def _int64_feature(value):
 
 
 def image_example(image_string):
+    """Generates a tf.train.Example sample to create tfRecord files"""
     image_shape = tf.image.decode_png(image_string).shape
 
     feature = {'height': _int64_feature(image_shape[0]),
@@ -54,6 +72,12 @@ def image_example(image_string):
 
 
 def to_tfrecord(record_file, path_to_folders):
+    """
+    Generates tfRecord files.
+    :param record_file: Path to location where to put the generated tfRecords.
+    :param path_to_folders: Path to Train/Validation dataset.
+    :return:
+    """
     with tf.io.TFRecordWriter(record_file) as writer:
         filenames = glob.glob(f"{path_to_folders}/*.png")
         for file in filenames:
@@ -65,18 +89,32 @@ def to_tfrecord(record_file, path_to_folders):
 
 
 def get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_size, buffer_size=2):
+    """
+    Returns a tf.data.Dataset object from a tfRecord file.
+    :param tfrecord_file: Path to tfRecord file.
+    :param hr_shape: Shape of high resolution images.
+    :param lr_shape: Shape of low resolution images.
+    :param features_description: A dict describing every feature in a tf.train.Example.
+    :param batch_size: Size of a batch of images in the dataset.
+    :param buffer_size: The maximum number of elements that will be buffered when prefetching.
+    :return: A tf.data.Dataset object.
+    """
+
+    # Read the tfRecord file
     image_dataset = tf.data.TFRecordDataset(tfrecord_file)
 
     def _parse_image_function(example_proto):
+        """This function parses a single example proto from the tfRecord file."""
         # Parse the input tf.Example proto using the dictionary above.
         feature = tf.io.parse_single_example(example_proto, features_description)
         image = tf.image.decode_png(feature['image'], channels=3)
         # Get the required sizes for SRGAN training
-        hr_image = tf.cast(tf.image.resize(image, size=[*hr_shape], method='bicubic'), dtype=tf.float32)
-        lr_image = tf.cast(tf.image.resize(image, size=[*lr_shape], method='bicubic'), dtype=tf.float32)
+        hr_image = tf.cast(tf.image.resize(image, size=hr_shape, method='bicubic'), dtype=tf.float32)
+        lr_image = tf.cast(tf.image.resize(image, size=lr_shape, method='bicubic'), dtype=tf.float32)
 
         return hr_image, lr_image
 
+    # Create the tf.data.Dataset object
     dataset = image_dataset.map(_parse_image_function, num_parallel_calls=multiprocessing.cpu_count()) \
                            .shuffle(128).repeat().batch(batch_size).prefetch(buffer_size)
 
@@ -84,6 +122,16 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_s
 
 
 def show_samples(tfrecord_file, hr_shape, lr_shape, features_description, batch_size):
+    """
+    Visualize a batch of HR/LR images from the dataset, and returns the batches
+    used to test the generator's performance every 100th epoch.
+    :param tfrecord_file: Path to tfRecord file.
+    :param hr_shape: Shape of high resolution images.
+    :param lr_shape: Shape of low resolution images.
+    :param features_description: A dict describing every feature in a tf.train.Example.
+    :param batch_size: Size of a batch of images in the dataset.
+    :return:
+    """
     dataset = get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_size)
     figure, axes = plt.subplots(nrows=2, ncols=4, figsize=(140, 140))
 
@@ -101,6 +149,7 @@ def show_samples(tfrecord_file, hr_shape, lr_shape, features_description, batch_
 
 
 def resolve(model, batch_lr):
+    """Prepares the SR batch for visualization"""
     batch_lr = tf.cast(batch_lr, tf.float32)
     batch_sr = model(batch_lr, training=False)
     batch_sr = tf.clip_by_value(batch_sr, 0, 255)
@@ -110,6 +159,14 @@ def resolve(model, batch_lr):
 
 
 def generate_and_save_images(model, batch_lr, epoch, batch_size=4):
+    """
+    Used for inference with the generator every 100th epoch.
+    :param model: The generator model.
+    :param batch_lr: A batch of LR images.
+    :param epoch: The number of the corresponding epoch.
+    :param batch_size: Batch size.
+    :return: Returns a SR batch, used to compute PSNR/SSIM metrics.
+    """
     batch_sr = resolve(model, batch_lr)
     figure, axes = plt.subplots(nrows=1, ncols=4, figsize=(140, 140))
 
