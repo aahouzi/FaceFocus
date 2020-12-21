@@ -115,8 +115,8 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size, buffer_size=2):
         feature = tf.io.parse_single_example(example_proto, features_description)
         image = tf.image.decode_png(feature['image'], channels=3)
         # Get the required sizes for SRGAN training
-        hr_image = tf.cast(tf.image.resize(image, size=hr_shape, method='bicubic'), dtype=tf.float32)
-        lr_image = tf.cast(tf.image.resize(image, size=lr_shape, method='bicubic'), dtype=tf.float32)
+        hr_image = tf.cast(tf.image.resize(image, size=[*hr_shape], method='bicubic'), dtype=tf.float32)
+        lr_image = tf.cast(tf.image.resize(image, size=[*lr_shape], method='bicubic'), dtype=tf.float32)
 
         return hr_image, lr_image
 
