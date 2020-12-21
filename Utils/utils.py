@@ -88,13 +88,12 @@ def to_tfrecord(record_file, path_to_folders):
             writer.write(tf_example.SerializeToString())
 
 
-def get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_size, buffer_size=2):
+def get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size, buffer_size=2):
     """
     Returns a tf.data.Dataset object from a tfRecord file.
     :param tfrecord_file: Path to tfRecord file.
     :param hr_shape: Shape of high resolution images.
     :param lr_shape: Shape of low resolution images.
-    :param features_description: A dict describing every feature in a tf.train.Example.
     :param batch_size: Size of a batch of images in the dataset.
     :param buffer_size: The maximum number of elements that will be buffered when prefetching.
     :return: A tf.data.Dataset object.
@@ -102,6 +101,13 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_s
 
     # Read the tfRecord file
     image_dataset = tf.data.TFRecordDataset(tfrecord_file)
+
+    # Description of features in tf.train.Example
+    features_description = {'height': tf.io.FixedLenFeature([], tf.int64),
+                            'width': tf.io.FixedLenFeature([], tf.int64),
+                            'depth': tf.io.FixedLenFeature([], tf.int64),
+                            'image': tf.io.FixedLenFeature([], tf.string)
+                            }
 
     def _parse_image_function(example_proto):
         """This function parses a single example proto from the tfRecord file."""
@@ -121,18 +127,17 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_s
     return dataset
 
 
-def show_samples(tfrecord_file, hr_shape, lr_shape, features_description, batch_size):
+def show_samples(tfrecord_file, hr_shape, lr_shape, batch_size):
     """
     Visualize a batch of HR/LR images from the dataset, and returns the batches
     used to test the generator's performance every 100th epoch.
     :param tfrecord_file: Path to tfRecord file.
     :param hr_shape: Shape of high resolution images.
     :param lr_shape: Shape of low resolution images.
-    :param features_description: A dict describing every feature in a tf.train.Example.
     :param batch_size: Size of a batch of images in the dataset.
     :return:
     """
-    dataset = get_dataset(tfrecord_file, hr_shape, lr_shape, features_description, batch_size)
+    dataset = get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size)
     figure, axes = plt.subplots(nrows=2, ncols=4, figsize=(140, 140))
 
     for hr, lr in dataset.unbatch().batch(batch_size).take(1):

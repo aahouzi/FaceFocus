@@ -37,7 +37,6 @@ parser.add_argument('--train_hr_path', required=True, help='Path to training HR 
 parser.add_argument('--val_hr_path', required=True, help='Path to validation HR tfRecords in Google Cloud Storage')
 parser.add_argument('--batch_val_hr', required=True, help='A batch of 4 HR validation images')
 parser.add_argument('--batch_val_lr', required=True, help='A batch of 4 LR validation images')
-parser.add_argument('--features_description', required=True, help='Description of a tf.train.Example in tfRecords')
 
 args = parser.parse_args()
 
@@ -133,7 +132,7 @@ with strategy.scope():
 
 
     # Distribute the dataset according to the strategy.
-    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape, args.features_description,
+    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape,
                                 batch_size=4 * strategy.num_replicas_in_sync)
 
     # Returns a tf.distribute.DistributedDataset from tf.data.Dataset, which represents a dataset
