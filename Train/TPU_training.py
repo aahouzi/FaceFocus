@@ -132,8 +132,9 @@ with strategy.scope():
 
 
     # Distribute the dataset according to the strategy.
-    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape,
-                                batch_size=4 * strategy.num_replicas_in_sync)
+    print(args.hr_shape)
+    print(type(args.hr_shape))
+    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape, batch_size=4 * strategy.num_replicas_in_sync)
 
     # Returns a tf.distribute.DistributedDataset from tf.data.Dataset, which represents a dataset
     # distributed among devices and machines.
