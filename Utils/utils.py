@@ -3,7 +3,7 @@
 #                               File Name: Utils/utils.py                                  #
 #                           Creation Date: December 17, 2019                               #
 #                         Source Language: Python                                          #
-#                  Repository: https://github.com/aahouzi/FaceFocus-Project                #
+#                  Repository: https://github.com/aahouzi/FaceFocus.git                    #
 #                              --- Code Description ---                                    #
 #                             Various utility functions                                    #
 ############################################################################################
@@ -109,7 +109,7 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size, buffer_size=2):
                             'image': tf.io.FixedLenFeature([], tf.string)
                             }
 
-    def _parse_image_function(example_proto):
+    def parse_image_function(example_proto):
         """This function parses a single example proto from the tfRecord file."""
         # Parse the input tf.Example proto using the dictionary above.
         feature = tf.io.parse_single_example(example_proto, features_description)
@@ -121,7 +121,7 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size, buffer_size=2):
         return hr_image, lr_image
 
     # Create the tf.data.Dataset object
-    dataset = image_dataset.map(_parse_image_function, num_parallel_calls=multiprocessing.cpu_count()) \
+    dataset = image_dataset.map(parse_image_function, num_parallel_calls=multiprocessing.cpu_count()) \
                            .shuffle(128).repeat().batch(batch_size).prefetch(buffer_size)
 
     return dataset
@@ -129,8 +129,7 @@ def get_dataset(tfrecord_file, hr_shape, lr_shape, batch_size, buffer_size=2):
 
 def show_samples(tfrecord_file, hr_shape, lr_shape, batch_size):
     """
-    Visualize a batch of HR/LR images from the dataset, and returns the batches
-    used to test the generator's performance every 100th epoch.
+    Visualize a batch of HR/LR images from the dataset.
     :param tfrecord_file: Path to tfRecord file.
     :param hr_shape: Shape of high resolution images.
     :param lr_shape: Shape of low resolution images.
@@ -150,11 +149,9 @@ def show_samples(tfrecord_file, hr_shape, lr_shape, batch_size):
                 else:
                     axes[i, j].imshow(lr[j], interpolation='nearest')
 
-    return hr, lr
 
-
-def resolve(model, batch_lr):
-    """Prepares the SR batch for visualization"""
+def generate_and_prepare(model, batch_lr):
+    """This function generates a SR batch, and prepares it for visualization"""
     batch_lr = tf.cast(batch_lr, tf.float32)
     batch_sr = model(batch_lr, training=False)
     batch_sr = tf.clip_by_value(batch_sr, 0, 255)
@@ -163,16 +160,16 @@ def resolve(model, batch_lr):
     return batch_sr
 
 
-def generate_and_save_images(model, batch_lr, epoch, batch_size=4):
+def plot_and_save(model, batch_lr, epoch, batch_size=4):
     """
-    Used for inference with the generator every 100th epoch.
+    Displays the generated SR batch, and save it locally.
     :param model: The generator model.
     :param batch_lr: A batch of LR images.
-    :param epoch: The number of the corresponding epoch.
+    :param epoch: Number of the actual epoch.
     :param batch_size: Batch size.
     :return: Returns a SR batch, used to compute PSNR/SSIM metrics.
     """
-    batch_sr = resolve(model, batch_lr)
+    batch_sr = generate_and_prepare(model, batch_lr)
     figure, axes = plt.subplots(nrows=1, ncols=4, figsize=(140, 140))
 
     for i in range(batch_size):

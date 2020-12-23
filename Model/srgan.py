@@ -3,7 +3,7 @@
 #                               File Name: Model/srgan.py                                  #
 #                           Creation Date: December 17, 2019                               #
 #                         Source Language: Python                                          #
-#                  Repository: https://github.com/aahouzi/FaceFocus-Project                #
+#                  Repository: https://github.com/aahouzi/FaceFocus.git                    #
 #                              --- Code Description ---                                    #
 #                       Implementation of the SRGAN architecture                           #
 ############################################################################################

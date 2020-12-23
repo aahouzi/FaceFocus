@@ -3,7 +3,7 @@
 #                               File Name: Train/TPU_training.py                           #
 #                           Creation Date: December 17, 2019                               #
 #                         Source Language: Python                                          #
-#                  Repository: https://github.com/aahouzi/FaceFocus-Project                #
+#                  Repository: https://github.com/aahouzi/FaceFocus.git                    #
 #                              --- Code Description ---                                    #
 #                 Implementation of TPU training process for the SRGAN                     #
 ############################################################################################
@@ -16,7 +16,8 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from Model.srgan import generator, discriminator
 from Loss.loss import model_vgg19, content_loss, adversarial_loss, discriminator_loss
-from Utils.utils import get_dataset, generate_and_save_images
+from Utils.utils import get_dataset, plot_and_save
+from ast import literal_eval as make_tuple
 from collections import defaultdict
 import numpy as np
 import argparse
@@ -30,13 +31,11 @@ import os
 
 parser = argparse.ArgumentParser(description='Train the model using Colab TPUs.')
 
-parser.add_argument('--n_epochs', required=True, help='Number of epochs')
-parser.add_argument('--hr_shape', required=True, help='High resolution shape')
-parser.add_argument('--lr_shape', required=True, help='Low resolution shape')
-parser.add_argument('--train_hr_path', required=True, help='Path to training HR tfRecords in Google Cloud Storage')
-parser.add_argument('--val_hr_path', required=True, help='Path to validation HR tfRecords in Google Cloud Storage')
-parser.add_argument('--batch_val_hr', required=True, help='A batch of 4 HR validation images')
-parser.add_argument('--batch_val_lr', required=True, help='A batch of 4 LR validation images')
+parser.add_argument('--n_epochs', type=int, required=True, help='Number of epochs')
+parser.add_argument('--hr_shape', type=make_tuple, required=True, help='High resolution shape')
+parser.add_argument('--lr_shape', type=make_tuple, required=True, help='Low resolution shape')
+parser.add_argument('--train_hr_path', type=str, required=True, help='Path to training HR tfRecords in GCS')
+parser.add_argument('--val_hr_path', type=str, required=True, help='Path to validation HR tfRecords in GCS')
 
 args = parser.parse_args()
 
@@ -95,8 +94,8 @@ with strategy.scope():
     def train_step(dataset, batch_size):
         """
         This function performs one training step on a batch of HR/LR images.
-        :param dataset:
-        :param batch_size:
+        :param dataset: A batch of HR/LR images.
+        :param batch_size: Batch size.
         :return:
         """
         # Get HR/LR images
@@ -132,9 +131,8 @@ with strategy.scope():
 
 
     # Distribute the dataset according to the strategy.
-    print(args.hr_shape)
-    print(type(args.hr_shape))
-    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape, batch_size=4 * strategy.num_replicas_in_sync)
+    train_dataset = get_dataset(args.train_hr_path, args.hr_shape, args.lr_shape,
+                                batch_size=4 * strategy.num_replicas_in_sync)
 
     # Returns a tf.distribute.DistributedDataset from tf.data.Dataset, which represents a dataset
     # distributed among devices and machines.
@@ -169,12 +167,15 @@ with strategy.scope():
             Loss['content_loss'].append(content_loss_sum.result().numpy() / steps_per_epoch)
 
             if epoch % 100 == 0:
+                # Test on the current batch of images
+                batch_hr, batch_lr = images
+
                 # Test the model over a batch of 4 images (batch_lr), and save the results
-                batch_sr = generate_and_save_images(generator_model, args.batch_val_lr, epoch)
+                batch_sr = plot_and_save(generator_model, batch_lr, epoch)
 
                 # Compute the PSNR/SSIM metrics
-                psnr_metric = round(np.sum(tf.image.psnr(batch_sr, args.batch_val_hr, max_val=255.0)) / 4, 2)
-                ssim_metric = round(np.sum(tf.image.ssim(batch_sr, args.batch_val_hr, max_val=255.0)) / 4, 2)
+                psnr_metric = round(np.sum(tf.image.psnr(batch_sr, batch_hr, max_val=255.0)) / 4, 2)
+                ssim_metric = round(np.sum(tf.image.ssim(batch_sr, batch_hr, max_val=255.0)) / 4, 2)
 
                 print('\n PSNR: {} | SSIM: {} \n'.format(psnr_metric, ssim_metric))
 
