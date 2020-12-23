@@ -195,7 +195,7 @@ with strategy.scope():
                   flush=True)
 
             # set up next epoch
-            epoch = (step + 1) // args.steps_per_epoch
+            epoch = (step + 1) // steps_per_epoch
             epoch_start_time = time.time()
             adversarial_loss_sum.reset_states()
             discriminator_loss_sum.reset_states()
