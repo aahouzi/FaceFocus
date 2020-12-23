@@ -149,6 +149,8 @@ def show_samples(tfrecord_file, hr_shape, lr_shape, batch_size):
                 else:
                     axes[i, j].imshow(lr[j], interpolation='nearest')
 
+    return hr, lr
+
 
 def generate_and_prepare(model, batch_lr):
     """This function generates a SR batch, and prepares it for visualization"""

@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from Model.srgan import generator, discriminator
 from Loss.loss import model_vgg19, content_loss, adversarial_loss, discriminator_loss
-from Utils.utils import get_dataset, plot_and_save
+from Utils.utils import get_dataset, plot_and_save, show_samples
 from ast import literal_eval as make_tuple
 from collections import defaultdict
 import numpy as np
@@ -144,11 +144,11 @@ with strategy.scope():
     # Define Number of steps per epoch.
     steps_per_epoch = 800 // (4 * strategy.num_replicas_in_sync)
 
-    # Prepare a batch of 4 HR/LR images from validation dataset to test the generator every 100 epoch
-    dataset = get_dataset(args.val_hr_path, args.hr_shape, args.lr_shape, batch_size=4)
-    batch_hr, batch_lr = dataset.unbatch().batch(4).take(1)
+    # Prepare a batch of 4 HR/LR images from validation dataset, to test the generator every 100 epoch
+    print("\n[INFO]: Visualizing a random HR/LR batch of images from validation dataset\n")
+    batch_hr, batch_lr = show_samples(args.val_hr_path, args.hr_shape, args.lr_shape, batch_size=4)
 
-    print("\n[INFO]: Steps per epoch: {}".format(steps_per_epoch))
+    print("\n[INFO]: Steps per epoch: {}\n".format(steps_per_epoch))
     Loss = defaultdict(list)
     epoch_start_time = time.time()
     epoch = 0
