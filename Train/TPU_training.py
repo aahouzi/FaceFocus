@@ -144,6 +144,10 @@ with strategy.scope():
     # Define Number of steps per epoch.
     steps_per_epoch = 800 // (4 * strategy.num_replicas_in_sync)
 
+    # Prepare a batch of 4 HR/LR images from validation dataset to test the generator every 100 epoch
+    dataset = get_dataset(args.val_hr_path, args.hr_shape, args.lr_shape, batch_size=4)
+    batch_hr, batch_lr = dataset.unbatch().batch(4).take(1)
+
     print("\n[INFO]: Steps per epoch: {}".format(steps_per_epoch))
     Loss = defaultdict(list)
     epoch_start_time = time.time()
@@ -167,9 +171,6 @@ with strategy.scope():
             Loss['content_loss'].append(content_loss_sum.result().numpy() / steps_per_epoch)
 
             if epoch % 100 == 0:
-                # Test on the current batch of images
-                batch_hr, batch_lr = images
-
                 # Test the model over a batch of 4 images (batch_lr), and save the results
                 batch_sr = plot_and_save(generator_model, batch_lr, epoch)
 
