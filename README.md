@@ -12,7 +12,7 @@ The repository contains the following files & directories:
 - **Model directory:** It contains an implementation of the Generator, and the Discriminator architecture of the SRGAN, as described in the original paper [Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network](https://arxiv.org/pdf/1609.04802.pdf)
 - **Train directory:** This directory contains an implementation of the training process used for training the SRGAN with Colab TPUs.
 - **Utils directory:** It contains various functions used for visualizing some samples from High/Low resolution images from the dataset.
-- **Dataset:** The dataset contains various High/Low resolution face images (about 200 on each), and it's encoded into tfRecord files. It's then placed on a bucket of Google Cloud Storage **due to TPU specific requirements**.
+- **Dataset:** The dataset contains various High/Low resolution images (about 800 on each), and it's encoded into tfRecord files. It's then placed on a bucket of Google Cloud Storage **due to TPU specific requirements**.
 
 ## :chart_with_upwards_trend: Training procedure
 - The model was trained with the famous DIV2K dataset, containing around 800 high resolution images, and their corresponding low resolution images (obtained
