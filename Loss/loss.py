@@ -15,6 +15,7 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications.vgg19 import VGG19
+from tensorflow.keras.applications.vgg19 import preprocess_input
 from tensorflow.keras.losses import BinaryCrossentropy, mean_squared_error
 
 
@@ -68,9 +69,14 @@ def content_loss(vgg_model, sr, hr, batch_size):
     :param batch_size: Batch size.
     :return: VGG-19 based content loss.
     """
-    sr, hr = (sr + 1) / 2, (hr + 1) / 2
+    sr, hr = preprocess_input(sr), preprocess_input(hr)
     sr_features, hr_features = vgg_model(sr), vgg_model(hr)
     return tf.nn.compute_average_loss(mean_squared_error(hr_features, sr_features), global_batch_size=batch_size)
+
+
+
+
+
 
 
 
