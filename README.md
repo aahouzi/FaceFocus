@@ -14,7 +14,12 @@ The repository contains the following files & directories:
 - **Utils directory:** It contains various functions used for visualizing some samples from High/Low resolution images from the dataset.
 - **Dataset:** The dataset contains various High/Low resolution face images (about 200 on each), and it's encoded into tfRecord files. It's then placed on a bucket of Google Cloud Storage **due to TPU specific requirements**.
 
+## :chart_with_upwards_trend: Training procedure
+- The model was trained with the famous DIV2K dataset, containing around 800 high resolution images, and their corresponding low resolution images (obtained
+by downscaling HR images with a factor of 4 using bicubic interpolation).
 
+- **IMPORTANT:** In order to avoid undesired local optima (i.e: for example when the discriminator loss converges to the value 0.0, and stays there), the generator was initialized with
+the pre-trained MSE-based SRResNet network as it was mentioned in the original paper of the SRGAN (initialization can be found in weights/pre_gen_weights.h5).
 
 ---
 ## :mailbox_closed: Contact
