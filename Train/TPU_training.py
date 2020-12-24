@@ -77,7 +77,7 @@ with strategy.scope():
     generator_model = generator(lr_size=64)
 
     # Load the pre weights
-    generator_model.load_weights("FaceFocus/weights/srgan/pre_gen_weights.h5")
+    generator_model.load_weights("FaceFocus/weights/pre_gen_weights.h5")
 
     # Define the loss function for the discriminator, and the optimizer
     VGG = model_vgg19()
