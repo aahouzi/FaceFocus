@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="FaceFocus-aahouzi",
-    version="0.0.3.3.1",
+    version="0.0.3.4",
     author="Anas Ahouzi",
     author_email="ahouzi2000@hotmail.fr",
     description="Generates high resolution face images from low resolution ones",
