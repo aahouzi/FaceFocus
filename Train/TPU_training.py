@@ -32,6 +32,7 @@ import os
 parser = argparse.ArgumentParser(description='Train the model using Colab TPUs.')
 
 parser.add_argument('--n_epochs', type=int, required=True, help='Number of epochs')
+parser.add_argument('--learning_rate', type=int, required=True, help='Learning rate')
 parser.add_argument('--hr_shape', type=make_tuple, required=True, help='High resolution shape')
 parser.add_argument('--lr_shape', type=make_tuple, required=True, help='Low resolution shape')
 parser.add_argument('--train_hr_path', type=str, required=True, help='Path to training HR tfRecords in GCS')
@@ -82,7 +83,7 @@ with strategy.scope():
 
     # Define the loss function for the discriminator, and the optimizer
     VGG = model_vgg19()
-    optimizer = Adam(learning_rate=0.001)
+    optimizer = Adam(learning_rate=args.learning_rate)
 
     # Instantiate metrics
     adversarial_loss_sum = tf.keras.metrics.Sum()
