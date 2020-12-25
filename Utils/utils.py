@@ -162,11 +162,12 @@ def generate_and_prepare(model, batch_lr):
     return batch_sr
 
 
-def plot_and_save(model, batch_lr, epoch, batch_size=4):
+def plot_and_save(model, batch_lr, drive_path, epoch, batch_size=4):
     """
-    Displays the generated SR batch, and save it locally.
+    Displays the generated SR batch, and save it to the drive.
     :param model: The generator model.
     :param batch_lr: A batch of LR images.
+    :param drive_path: Path to a drive directory for saving images.
     :param epoch: Number of the actual epoch.
     :param batch_size: Batch size.
     :return: Returns a SR batch, used to compute PSNR/SSIM metrics.
@@ -177,7 +178,7 @@ def plot_and_save(model, batch_lr, epoch, batch_size=4):
     for i in range(batch_size):
         axes[i].imshow(batch_sr[i], interpolation='nearest')
 
-    plt.savefig('image_at_epoch_{}.png'.format(epoch))
+    plt.savefig(drive_path+'/image_every_100epoch/image_at_epoch_{}.png'.format(epoch))
 
     return batch_sr
 

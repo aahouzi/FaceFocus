@@ -36,6 +36,7 @@ parser.add_argument('--hr_shape', type=make_tuple, required=True, help='High res
 parser.add_argument('--lr_shape', type=make_tuple, required=True, help='Low resolution shape')
 parser.add_argument('--train_hr_path', type=str, required=True, help='Path to training HR tfRecords in GCS')
 parser.add_argument('--val_hr_path', type=str, required=True, help='Path to validation HR tfRecords in GCS')
+parser.add_argument('--drive_path', type=str, required=True, help='Path to a drive location for saving weights/images')
 
 args = parser.parse_args()
 
@@ -172,7 +173,7 @@ with strategy.scope():
 
             if epoch % 100 == 0:
                 # Test the model over a batch of 4 images (batch_lr), and save the results
-                batch_sr = plot_and_save(generator_model, batch_lr, epoch)
+                batch_sr = plot_and_save(generator_model, batch_lr, args.drive_path, epoch)
 
                 # Compute the PSNR/SSIM metrics
                 psnr_metric = round(np.sum(tf.image.psnr(batch_sr, batch_hr, max_val=255.0)) / 4, 2)
@@ -181,8 +182,8 @@ with strategy.scope():
                 print('\n PSNR: {} | SSIM: {} \n'.format(psnr_metric, ssim_metric))
 
                 # Save the models every 100 epoch
-                generator_model.save('ModelTPU-generator-{}.h5'.format(epoch))
-                discriminator_model.save('ModelTPU-discriminator-{}.h5'.format(epoch))
+                generator_model.save(args.drive_path+'/weights/ModelTPU-generator-{}.h5'.format(epoch))
+                discriminator_model.save(args.drive_path+'/weights/ModelTPU-discriminator-{}.h5'.format(epoch))
 
             # report metrics
             duration = round(time.time() - epoch_start_time, 2)
