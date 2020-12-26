@@ -156,8 +156,7 @@ def generate_and_prepare(model, batch_lr):
     """This function generates a SR batch, and prepares it for visualization"""
     batch_lr = tf.cast(batch_lr, tf.float32)
     batch_sr = model(batch_lr, training=False)
-    batch_sr = tf.clip_by_value(batch_sr, 0, 255)
-    batch_sr = tf.round(batch_sr)
+    batch_sr = tf.map_fn(denormalize_tanh, batch_sr)
     batch_sr = tf.cast(batch_sr, tf.uint8)
     return batch_sr
 

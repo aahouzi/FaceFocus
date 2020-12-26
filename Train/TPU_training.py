@@ -179,7 +179,7 @@ with strategy.scope():
                 # Test the model over a batch of 4 images (batch_lr), and save the results
                 batch_sr = plot_and_save(generator_model, batch_lr, args.drive_path, epoch)
 
-                # Compute the PSNR/SSIM metrics
+                # Compute the PSNR/SSIM metrics average over the batch
                 psnr_metric = round(np.sum(tf.image.psnr(batch_sr, batch_hr, max_val=255.0)) / 4, 2)
                 ssim_metric = round(np.sum(tf.image.ssim(batch_sr, batch_hr, max_val=255.0)) / 4, 2)
 
