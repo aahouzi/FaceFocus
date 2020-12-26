@@ -16,7 +16,7 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from Model.srgan import generator, discriminator
 from Loss.loss import model_vgg19, content_loss, adversarial_loss, discriminator_loss
-from Utils.utils import get_dataset, plot_and_save, show_samples
+from Utils.utils import get_dataset, plot_and_save, show_samples, normalize_tanh
 from ast import literal_eval as make_tuple
 from collections import defaultdict
 import numpy as np
@@ -102,6 +102,9 @@ with strategy.scope():
         """
         # Get HR/LR images
         hr_img, lr_img = dataset
+
+        # Get HR images in range [-1, 1]
+        hr_img = tf.map_fn(normalize_tanh, hr_img)
 
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             # Start the training

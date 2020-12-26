@@ -14,7 +14,7 @@
 ################################################################################
 from tensorflow.keras.layers import Add, BatchNormalization, Conv2D, Dense, Flatten, Input, LeakyReLU, PReLU, Lambda
 from tensorflow.keras.models import Model
-from Utils.utils import pixel_shuffle, normalize, denormalize_tanh, normalize_tanh
+from Utils.utils import pixel_shuffle, normalize
 
 
 ################################################################################
@@ -74,6 +74,8 @@ def generator(lr_size, num_filters=64, num_res_blocks=16):
     :return: A Keras functional API model.
     """
     x_in = Input(shape=(lr_size, lr_size, 3))
+
+    # Scale the values to range [0, 1]
     x = Lambda(normalize)(x_in)
 
     x = Conv2D(num_filters, kernel_size=9, padding='same')(x)
@@ -91,9 +93,6 @@ def generator(lr_size, num_filters=64, num_res_blocks=16):
 
     x = Conv2D(3, kernel_size=9, padding='same', activation='tanh')(x)
 
-    # Here, we denormalize to get an image with pixels in [0, 255]
-    x = Lambda(denormalize_tanh)(x)
-
     return Model(x_in, x)
 
 
@@ -105,9 +104,8 @@ def discriminator(hr_size, num_filters=64):
     :return: A Keras functional API model.
     """
     x_in = Input(shape=(hr_size, hr_size, 3))
-    x = Lambda(normalize_tanh)(x_in)
 
-    x = discriminator_block(x, num_filters, batchnorm=False)
+    x = discriminator_block(x_in, num_filters, batchnorm=False)
     x = discriminator_block(x, num_filters, strides=2)
 
     x = discriminator_block(x, num_filters * 2)
